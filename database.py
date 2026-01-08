@@ -62,104 +62,67 @@ def init_database():
     existing_messages = session.query(CustomerMessage).first()
     
     if not existing_messages:
-        try:
-            # Try different paths for CSV file
-            possible_paths = [
-                'data/GeneralistRails_Project_MessageData.csv',
-                './data/GeneralistRails_Project_MessageData.csv',
-                'GeneralistRails_Project_MessageData.csv',
-                './GeneralistRails_Project_MessageData.csv'
-            ]
+        # Load CSV data
+        csv_path = os.path.join('data', 'GeneralistRails_Project_MessageData.csv')
+        if os.path.exists(csv_path):
+            df = pd.read_csv(csv_path)
             
-            df = None
-            csv_path = None
+            # Clean and process data
+            df['timestamp'] = pd.to_datetime(df['Timestamp (UTC)'])
+            df['message_body'] = df['Message Body'].astype(str)
+            df['user_id'] = pd.to_numeric(df['User ID'], errors='coerce')
             
-            for path in possible_paths:
-                if os.path.exists(path):
-                    csv_path = path
-                    df = pd.read_csv(path)
-                    print(f"✅ Loaded CSV from: {path}")
-                    break
+            # Calculate urgency scores
+            urgency_keywords = {
+                'urgent': 5, 'emergency': 5, 'immediately': 4, 'asap': 4,
+                'loan': 3, 'disburse': 4, 'approval': 3, 'rejected': 4,
+                'batch number': 3, 'CRB': 3, 'clearance': 3,
+                'payment': 2, 'pay': 2, 'money': 2, 'balance': 2
+            }
             
-            if df is None:
-                print("⚠️ CSV file not found in any location. Creating sample data instead.")
-                # Create sample messages if CSV not found
-                messages = []
-                for i in range(50):
-                    msg = CustomerMessage(
-                        user_id=1000 + i,
-                        timestamp=datetime.now() - timedelta(hours=i),
-                        message_body=f"Sample message {i+1}: Need help with loan application",
-                        urgency_score=random.randint(1, 15),
-                        priority=random.choice(['low', 'normal', 'high']),
-                        category=random.choice(['loan_application', 'payment', 'technical']),
-                        status=random.choice(['pending', 'in_progress', 'resolved'])
-                    )
-                    messages.append(msg)
-                
-                session.add_all(messages)
-                print("✅ Created 50 sample messages")
-            else:
-                # Clean and process data
-                print("📊 Processing CSV data...")
-                df['timestamp'] = pd.to_datetime(df['Timestamp (UTC)'])
-                df['message_body'] = df['Message Body'].astype(str)
-                df['user_id'] = pd.to_numeric(df['User ID'], errors='coerce')
-                
-                # Calculate urgency scores
-                urgency_keywords = {
-                    'urgent': 5, 'emergency': 5, 'immediately': 4, 'asap': 4,
-                    'loan': 3, 'disburse': 4, 'approval': 3, 'rejected': 4,
-                    'batch number': 3, 'CRB': 3, 'clearance': 3,
-                    'payment': 2, 'pay': 2, 'money': 2, 'balance': 2
-                }
-                
-                messages = []
-                for _, row in df.iterrows():
-                    if pd.isna(row['user_id']) or pd.isna(row['message_body']):
-                        continue
-                        
-                    # Calculate urgency score
-                    urgency_score = 0
-                    message_lower = row['message_body'].lower()
-                    for keyword, score in urgency_keywords.items():
-                        if keyword in message_lower:
-                            urgency_score += score
+            messages = []
+            for _, row in df.iterrows():
+                if pd.isna(row['user_id']) or pd.isna(row['message_body']):
+                    continue
                     
-                    # Determine priority
-                    priority = 'low'
-                    if urgency_score >= 10:
-                        priority = 'high'
-                    elif urgency_score >= 5:
-                        priority = 'normal'
-                    
-                    # Determine category
-                    category = 'other'
-                    if any(word in message_lower for word in ['loan', 'apply', 'approved', 'rejected']):
-                        category = 'loan_application'
-                    elif any(word in message_lower for word in ['pay', 'payment', 'clear', 'balance']):
-                        category = 'payment'
-                    elif any(word in message_lower for word in ['batch', 'number', 'CRB', 'clearance']):
-                        category = 'clearance'
-                    elif any(word in message_lower for word in ['urgent', 'emergency', 'asap', 'immediately']):
-                        category = 'urgent_inquiry'
-                    elif any(word in message_lower for word in ['update', 'change', 'number', 'phone']):
-                        category = 'account_update'
-                    
-                    
-                    message = CustomerMessage(
-                        user_id=int(row['user_id']),
-                        timestamp=row['timestamp'],
-                        message_body=row['message_body'],
-                        urgency_score=urgency_score,
-                        priority=priority,
-                        category=category,
-                        status='pending'  # YEH LINE ADD KARNA HAI
-                    )
-                    messages.append(msg)
+                # Calculate urgency score
+                urgency_score = 0
+                message_lower = row['message_body'].lower()
+                for keyword, score in urgency_keywords.items():
+                    if keyword in message_lower:
+                        urgency_score += score
                 
-                session.add_all(messages)
-                print(f"✅ Loaded {len(messages)} messages from CSV")
+                # Determine priority
+                priority = 'low'
+                if urgency_score >= 10:
+                    priority = 'high'
+                elif urgency_score >= 5:
+                    priority = 'normal'
+                
+                # Determine category
+                category = 'other'
+                if any(word in message_lower for word in ['loan', 'apply', 'approved', 'rejected']):
+                    category = 'loan_application'
+                elif any(word in message_lower for word in ['pay', 'payment', 'clear', 'balance']):
+                    category = 'payment'
+                elif any(word in message_lower for word in ['batch', 'number', 'CRB', 'clearance']):
+                    category = 'clearance'
+                elif any(word in message_lower for word in ['urgent', 'emergency', 'asap', 'immediately']):
+                    category = 'urgent_inquiry'
+                elif any(word in message_lower for word in ['update', 'change', 'number', 'phone']):
+                    category = 'account_update'
+                
+                message = CustomerMessage(
+                    user_id=int(row['user_id']),
+                    timestamp=row['timestamp'],
+                    message_body=row['message_body'],
+                    urgency_score=urgency_score,
+                    priority=priority,
+                    category=category
+                )
+                messages.append(message)
+            
+            session.add_all(messages)
             
             # Create sample canned responses
             canned_responses = [
@@ -178,35 +141,55 @@ def init_database():
                     response_text="Your batch number is [BATCH_NUMBER]. Please use this for CRB clearance.",
                     category="clearance"
                 ),
+                CannedResponse(
+                    title="Account Verification",
+                    response_text="We need to verify your account details. Please provide your ID number for verification.",
+                    category="account_update"
+                ),
+                CannedResponse(
+                    title="Application Rejected - 7 Days",
+                    response_text="Your application has been rejected. You can reapply after 7 days.",
+                    category="loan_application"
+                ),
+                CannedResponse(
+                    title="Payment Extension",
+                    response_text="We understand your situation. We can extend your payment deadline by 3 days.",
+                    category="payment"
+                ),
+                CannedResponse(
+                    title="Urgent Inquiry",
+                    response_text="We are looking into your urgent inquiry and will respond shortly.",
+                    category="urgent_inquiry"
+                )
             ]
             
             session.add_all(canned_responses)
             
             # Create sample customer profiles
             profiles = []
-            for i in range(1, 31):
+            unique_user_ids = df['User ID'].unique()[:20]  # First 20 users for sample
+            
+            for user_id in unique_user_ids:
                 profile = CustomerProfile(
-                    user_id=1000 + i,
-                    name=f"Customer {1000 + i}",
-                    email=f"customer{1000 + i}@example.com",
-                    phone=f"07{str(1000 + i).zfill(8)}",
-                    last_loan_amount=random.choice([5000, 10000, 15000, 20000]),
-                    last_loan_date=datetime.now() - timedelta(days=random.randint(10, 90)),
-                    repayment_history=random.choice(['good', 'fair', 'poor']),
-                    total_loans=random.randint(1, 10),
-                    total_repaid=random.randint(10000, 100000),
-                    credit_score=random.randint(550, 800)
+                    user_id=int(user_id),
+                    name=f"Customer {user_id}",
+                    email=f"customer{user_id}@example.com",
+                    phone=f"07{str(user_id).zfill(8)}",
+                    last_loan_amount=5000 if user_id % 3 == 0 else 10000 if user_id % 3 == 1 else 15000,
+                    last_loan_date=datetime(2023, 12, 1),
+                    repayment_history='good' if user_id % 4 == 0 else 'fair' if user_id % 4 == 1 else 'poor',
+                    total_loans=user_id % 10 + 1,
+                    total_repaid=(user_id % 10 + 1) * 8000,
+                    credit_score=650 + (user_id % 10) * 10
                 )
                 profiles.append(profile)
             
             session.add_all(profiles)
             
             session.commit()
-            print("✅ Database initialized successfully!")
-            
-        except Exception as e:
-            print(f"❌ Error initializing database: {e}")
-            session.rollback()
+            print(f"Loaded {len(messages)} messages, {len(canned_responses)} canned responses, and {len(profiles)} customer profiles.")
+        else:
+            print(f"CSV file not found at {csv_path}")
     
     session.close()
     return engine

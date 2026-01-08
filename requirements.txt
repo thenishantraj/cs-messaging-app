@@ -1,0 +1,6 @@
+streamlit
+pandas
+sqlalchemy
+plotly
+streamlit-chat
+python-dateutil

@@ -48,13 +48,7 @@ A modern, interactive customer service messaging application built with Streamli
 **Visualization:**
 - ![Plotly](https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white)
 
-![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.28%2B-red)
-![Build Status](https://github.com/your-username/branch-cs-messaging/actions/workflows/ci.yml/badge.svg)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Code Coverage](https://img.shields.io/codecov/c/github/your-username/branch-cs-messaging)
-![Last Commit](https://img.shields.io/github/last-commit/your-username/branch-cs-messaging)
-![Stars](https://img.shields.io/github/stars/your-username/branch-cs-messaging?style=social)
+
 
 ## 🚀 Quick Start
 

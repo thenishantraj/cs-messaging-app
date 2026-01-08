@@ -146,6 +146,7 @@ def init_database():
                     elif any(word in message_lower for word in ['update', 'change', 'number', 'phone']):
                         category = 'account_update'
                     
+                    
                     message = CustomerMessage(
                         user_id=int(row['user_id']),
                         timestamp=row['timestamp'],
@@ -153,7 +154,7 @@ def init_database():
                         urgency_score=urgency_score,
                         priority=priority,
                         category=category,
-                        status='pending'  # Default status
+                        status='pending'  # YEH LINE ADD KARNA HAI
                     )
                     messages.append(msg)
                 
